@@ -1,45 +1,90 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
+use std::collections::{BTreeMap, HashMap};
+
+use tokio::sync::mpsc::{self, Sender};
+use tokio::sync::oneshot;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Types {
+    Char(char),
+    Integer(isize),
+    UInteger(usize),
+    String(String),
+    Float(f64),
+    Boolean(bool),
+    Vector(Vec<Types>),
+    HashMap(HashMap<String, Types>),
+    BTreeMap(BTreeMap<String, Types>),
+    KeyValue(String, Box<Types>),
+    Nil,
 }
 
-// use tokio::sync::mpsc;
+pub enum Action {
+    Insert(String, Types),
+    Contains(String),
+}
 
-// #[tokio::main]
-// async fn main() {
-//     let (tx, mut rx) = mpsc::channel(100);
+pub struct BTree {
+    tx: Sender<(Action, tokio::sync::oneshot::Sender<Option<Types>>)>, 
+}
 
-//     tokio::spawn(async move {
-//         for i in 0..10 {
-//             if let Err(_) = tx.send(i).await {
-//                 println!("receiver dropped");
-//                 return;
-//             }
-//         }
-//     });
+impl BTree {
+    pub fn start(buffer: usize) -> Self {
+        let (tx, mut rx) = mpsc::channel(buffer);
+        tokio::spawn(async move {
+            let mut btree: BTreeMap<String, Types> = BTreeMap::new();
+            while let Some((action, tx_o)) = rx.recv().await {
+                let tx_o:  tokio::sync::oneshot::Sender<Option<Types>> = tx_o;
+                match action {
+                    Action::Insert(k, v) => {
+                        let insert = btree.insert(k, v);
+                        if let Err(_) = tx_o.send(insert) {
+                            println!("the receiver dropped");
+                        }
+                    }
+                    Action::Contains(k) => {
+                        let contains = btree.contains_key(&k);
+                        if let Err(_) = tx_o.send(Some(Types::Boolean(contains))) {
+                            println!("the receiver dropped");
+                        }
+                    }
+                }
+            }
+        });
 
-//     while let Some(i) = rx.recv().await {
-//         println!("got = {}", i);
-//     }
-// }
+        Self {
+            tx
+        }
+    }
 
-// use tokio::sync::oneshot;
+    pub async fn insert(&self, k: String, v: Types) -> Option<Types> {
+        let tx = self.tx.clone();
+        let (tx_o, rx_o) = oneshot::channel();
+        let action = Action::Insert(k, v);
+        let send = (action, tx_o);
 
-// #[tokio::main]
-// async fn main() {
-//     let (tx, rx) = oneshot::channel();
+        if let Err(_) = tx.send(send).await {
+            println!("receiver dropped");
+        }
+    
+        match rx_o.await {
+            Ok(v) => v,
+            Err(_) => None,
+        }
+    }
 
-//     tokio::spawn(async move {
-//         if let Err(_) = tx.send(3) {
-//             println!("the receiver dropped");
-//         }
-//     });
+    pub async fn contains(&self, k: String) -> Option<Types> {
+        let tx = self.tx.clone();
+        let (tx_o, rx_o) = oneshot::channel();
+        let action = Action::Contains(k);
+        let send = (action, tx_o);
 
-//     match rx.await {
-//         Ok(v) => println!("got = {:?}", v),
-//         Err(_) => println!("the sender dropped"),
-//     }
-// }
+        if let Err(_) = tx.send(send).await {
+            println!("receiver dropped");
+        }
+    
+        match rx_o.await {
+            Ok(v) => v,
+            Err(_) => None,
+        }
+    }
+}
