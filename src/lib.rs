@@ -24,7 +24,7 @@ pub enum Action {
 }
 
 pub struct BTree {
-    tx: Sender<(Action, tokio::sync::oneshot::Sender<Option<Types>>)>, 
+    tx: Sender<(Action, tokio::sync::oneshot::Sender<Option<Types>>)>,
 }
 
 impl BTree {
@@ -33,39 +33,37 @@ impl BTree {
         tokio::spawn(async move {
             let mut btree: BTreeMap<String, Types> = BTreeMap::new();
             while let Some((action, tx_o)) = rx.recv().await {
-                let tx_o:  tokio::sync::oneshot::Sender<Option<Types>> = tx_o;
+                let tx_o: tokio::sync::oneshot::Sender<Option<Types>> = tx_o;
                 match action {
                     Action::Insert(k, v) => {
                         let insert = btree.insert(k, v);
                         if let Err(_) = tx_o.send(insert) {
-                            println!("the receiver dropped");
+                            println!("the receiver dropped, mpsc insert");
                         }
                     }
                     Action::Contains(k) => {
                         let contains = btree.contains_key(&k);
                         if let Err(_) = tx_o.send(Some(Types::Boolean(contains))) {
-                            println!("the receiver dropped");
+                            println!("the receiver dropped, mpsc contains k: {}", k);
                         }
                     }
                 }
             }
         });
 
-        Self {
-            tx
-        }
+        Self { tx }
     }
 
     pub async fn insert(&self, k: String, v: Types) -> Option<Types> {
         let tx = self.tx.clone();
         let (tx_o, rx_o) = oneshot::channel();
-        let action = Action::Insert(k, v);
+        let action = Action::Insert(k.clone(), v.clone());
         let send = (action, tx_o);
 
         if let Err(_) = tx.send(send).await {
-            println!("receiver dropped");
+            println!("receiver dropped, insert k: {}, v: {:?}", k, v);
         }
-    
+
         match rx_o.await {
             Ok(v) => v,
             Err(_) => None,
@@ -75,13 +73,13 @@ impl BTree {
     pub async fn contains(&self, k: String) -> Option<Types> {
         let tx = self.tx.clone();
         let (tx_o, rx_o) = oneshot::channel();
-        let action = Action::Contains(k);
+        let action = Action::Contains(k.clone());
         let send = (action, tx_o);
 
         if let Err(_) = tx.send(send).await {
-            println!("receiver dropped");
+            println!("receiver dropped, contains {}", k);
         }
-    
+
         match rx_o.await {
             Ok(v) => v,
             Err(_) => None,
