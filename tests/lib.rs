@@ -8,5 +8,5 @@ async fn test_insert_contains() {
     assert!(ins.is_none());
 
     let cont = btree.contains("hello".to_string()).await;
-    assert_eq!(cont, Some(Types::Boolean(true)));
+    assert!(cont.unwrap());
 }

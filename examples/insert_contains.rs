@@ -8,7 +8,7 @@ async fn main() {
     assert!(ins.is_none());
 
     let cont = btree.contains("hello".to_string()).await;
-    assert_eq!(cont, Some(Types::Boolean(true)));
+    assert!(cont.unwrap());
 
     return;
 }

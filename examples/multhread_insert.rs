@@ -14,7 +14,7 @@ async fn main() {
     assert!(ins.is_none());
 
     let cont = (*m).contains("hello".to_string()).await;
-    assert_eq!(cont, Some(Types::Boolean(true)));
+    assert!(cont.unwrap());
 
     {
         let btree_async = btree.clone();
@@ -24,7 +24,7 @@ async fn main() {
             assert!(ins.is_none());
 
             let cont = (*t_m).contains("wow".to_string()).await;
-            assert_eq!(cont, Some(Types::Boolean(true)));
+            assert!(cont.unwrap());
         });
         println!("Done async 1");
     };
@@ -35,9 +35,9 @@ async fn main() {
             let t_m = btree_async2.lock().await;
 
             let cont = (*t_m).contains("wow".to_string()).await;
-            assert_eq!(cont, Some(Types::Boolean(true)));
+            assert!(cont.unwrap());
             let cont = (*t_m).contains("hello".to_string()).await;
-            assert_eq!(cont, Some(Types::Boolean(true)));
+            assert!(cont.unwrap());
         });
         println!("Done async 2")
     };

@@ -66,11 +66,11 @@ impl BTree {
 
         match rx_o.await {
             Ok(v) => v,
-            Err(_) => None,
+            Err(_) => Some(Types::Nil),
         }
     }
 
-    pub async fn contains(&self, k: String) -> Option<Types> {
+    pub async fn contains(&self, k: String) -> Result<bool, String> {
         let tx = self.tx.clone();
         let (tx_o, rx_o) = oneshot::channel();
         let action = Action::Contains(k.clone());
@@ -81,8 +81,9 @@ impl BTree {
         }
 
         match rx_o.await {
-            Ok(v) => v,
-            Err(_) => None,
+            Ok(Some(Types::Boolean(true))) => Ok(true),
+            Err(e) => Err(format!("{:?}", e)),
+            _ => Ok(false),
         }
     }
 }
