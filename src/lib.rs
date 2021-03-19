@@ -1,22 +1,11 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 use tokio::sync::mpsc::{self, Sender};
 use tokio::sync::oneshot;
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Types {
-    Char(char),
-    Integer(isize),
-    UInteger(usize),
-    String(String),
-    Float(f64),
-    Boolean(bool),
-    Vector(Vec<Types>),
-    HashMap(HashMap<String, Types>),
-    BTreeMap(BTreeMap<String, Types>),
-    KeyValue(String, Box<Types>),
-    Nil,
-}
+pub mod model;
+
+use model::Types;
 
 pub enum Action {
     Insert(String, Types),
@@ -54,20 +43,18 @@ impl BTree {
         Self { tx }
     }
 
-    pub async fn insert(&self, k: String, v: Types) -> Option<Types> {
+    pub async fn insert(&self, k: String, v: Types) -> Result<Option<Types>, String> {
         let tx = self.tx.clone();
         let (tx_o, rx_o) = oneshot::channel();
         let action = Action::Insert(k.clone(), v.clone());
         let send = (action, tx_o);
 
-        if let Err(_) = tx.send(send).await {
-            println!("receiver dropped, insert k: {}, v: {:?}", k, v);
-        }
+        tx.send(send)
+            .await
+            .map_err(|_| format!("receiver dropped, insert key {}, value {:?}", k, v))?;
 
-        match rx_o.await {
-            Ok(v) => v,
-            Err(_) => Some(Types::Nil),
-        }
+        rx_o.await
+            .map_err(|_| format!("insert failed {}, value {:?}", k, v))
     }
 
     pub async fn contains(&self, k: String) -> Result<bool, String> {
@@ -76,10 +63,9 @@ impl BTree {
         let action = Action::Contains(k.clone());
         let send = (action, tx_o);
 
-        if let Err(_) = tx.send(send).await {
-            println!("receiver dropped, contains {}", k);
-        }
-
+        tx.send(send)
+            .await
+            .map_err(|_| format!("receiver dropped, contains key {}", k))?;
         match rx_o.await {
             Ok(Some(Types::Boolean(true))) => Ok(true),
             Err(e) => Err(format!("{:?}", e)),

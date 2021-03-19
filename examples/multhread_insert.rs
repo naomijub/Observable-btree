@@ -1,7 +1,7 @@
 use std::sync::Arc;
-
-use observable_tree::*;
 use tokio::sync::Mutex;
+
+use observable_tree::{model::Types, BTree};
 
 #[tokio::main]
 async fn main() {
@@ -11,7 +11,7 @@ async fn main() {
     let btree_main = btree.clone();
     let m = btree_main.lock().await;
     let ins = (*m).insert("hello".to_string(), Types::Integer(5)).await;
-    assert!(ins.is_none());
+    assert!(ins.unwrap().is_none());
 
     let cont = (*m).contains("hello".to_string()).await;
     assert!(cont.unwrap());
@@ -21,7 +21,7 @@ async fn main() {
         tokio::spawn(async move {
             let t_m = btree_async.lock().await;
             let ins = (*t_m).insert("wow".to_string(), Types::Integer(5)).await;
-            assert!(ins.is_none());
+            assert!(ins.unwrap().is_none());
 
             let cont = (*t_m).contains("wow".to_string()).await;
             assert!(cont.unwrap());
