@@ -1,7 +1,7 @@
 use std::sync::Arc;
-
-use observable_tree::*;
 use tokio::sync::Mutex;
+
+use observable_tree::BTree;
 
 #[tokio::main]
 async fn main() {
@@ -10,21 +10,21 @@ async fn main() {
 
     let btree_main = btree.clone();
     let m = btree_main.lock().await;
-    let ins = (*m).insert("hello".to_string(), Types::Integer(5)).await;
-    assert!(ins.is_none());
+    let ins = (*m).insert("hello".to_string(), 5).await;
+    assert!(ins.unwrap().is_none());
 
     let cont = (*m).contains("hello".to_string()).await;
-    assert_eq!(cont, Some(Types::Boolean(true)));
+    assert!(cont.unwrap());
 
     {
         let btree_async = btree.clone();
         tokio::spawn(async move {
             let t_m = btree_async.lock().await;
-            let ins = (*t_m).insert("wow".to_string(), Types::Integer(5)).await;
-            assert!(ins.is_none());
+            let ins = (*t_m).insert("wow".to_string(), 76).await;
+            assert!(ins.unwrap().is_none());
 
             let cont = (*t_m).contains("wow".to_string()).await;
-            assert_eq!(cont, Some(Types::Boolean(true)));
+            assert!(cont.unwrap());
         });
         println!("Done async 1");
     };
@@ -35,9 +35,9 @@ async fn main() {
             let t_m = btree_async2.lock().await;
 
             let cont = (*t_m).contains("wow".to_string()).await;
-            assert_eq!(cont, Some(Types::Boolean(true)));
+            assert!(cont.unwrap());
             let cont = (*t_m).contains("hello".to_string()).await;
-            assert_eq!(cont, Some(Types::Boolean(true)));
+            assert!(cont.unwrap());
         });
         println!("Done async 2")
     };
