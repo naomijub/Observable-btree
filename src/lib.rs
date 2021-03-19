@@ -43,7 +43,8 @@ impl BTree {
         Self { tx }
     }
 
-    pub async fn insert(&self, k: String, v: Types) -> Result<Option<Types>, String> {
+    pub async fn insert<V: Into<Types>>(&self, k: String, v: V) -> Result<Option<Types>, String> {
+        let v = v.into();
         let tx = self.tx.clone();
         let (tx_o, rx_o) = oneshot::channel();
         let action = Action::Insert(k.clone(), v.clone());
