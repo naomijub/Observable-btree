@@ -11,6 +11,7 @@ pub enum Action {
     Insert(String, Types),
     Contains(String),
     Get(String),
+    Len,
 }
 
 pub struct BTree {
@@ -45,7 +46,13 @@ impl BTree {
                             None
                         };
                         if let Err(_) = tx_o.send(get) {
-                            println!("the receiver dropped, mpsc contains k: {}", k);
+                            println!("the receiver dropped, mpsc get k: {}", k);
+                        }
+                    }
+                    Action::Len => {
+                        let len = btree.len();
+                        if let Err(_) = tx_o.send(Some(Types::UInteger(len))) {
+                            println!("the receiver dropped, mpsc len");
                         }
                     }
                 }
@@ -99,6 +106,22 @@ impl BTree {
         match rx_o.await {
             Ok(types) => Ok(types),
             Err(e) => Err(format!("get failed {} with error: {:?}", k, e)),
+        }
+    }
+
+    pub async fn len(&self) -> Result<usize, String> {
+        let tx = self.tx.clone();
+        let (tx_o, rx_o) = oneshot::channel();
+        let action = Action::Len;
+        let send = (action, tx_o);
+
+        tx.send(send)
+            .await
+            .map_err(|_| format!("receiver dropped, len",))?;
+
+        match rx_o.await {
+            Ok(Some(Types::UInteger(len))) => Ok(len),
+            _ => Err(format!("len failed")),
         }
     }
 }
