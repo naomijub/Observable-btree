@@ -10,6 +10,8 @@ use model::Types;
 pub enum Action {
     Insert(String, Types),
     Contains(String),
+    Get(String),
+    Len,
 }
 
 pub struct BTree {
@@ -34,6 +36,23 @@ impl BTree {
                         let contains = btree.contains_key(&k);
                         if let Err(_) = tx_o.send(Some(Types::Boolean(contains))) {
                             println!("the receiver dropped, mpsc contains k: {}", k);
+                        }
+                    }
+                    Action::Get(k) => {
+                        let get = btree.get(&k);
+                        let get = if let Some(types) = get {
+                            Some(types.to_owned())
+                        } else {
+                            None
+                        };
+                        if let Err(_) = tx_o.send(get) {
+                            println!("the receiver dropped, mpsc get k: {}", k);
+                        }
+                    }
+                    Action::Len => {
+                        let len = btree.len();
+                        if let Err(_) = tx_o.send(Some(Types::UInteger(len))) {
+                            println!("the receiver dropped, mpsc len");
                         }
                     }
                 }
@@ -71,6 +90,38 @@ impl BTree {
             Ok(Some(Types::Boolean(true))) => Ok(true),
             Err(e) => Err(format!("{:?}", e)),
             _ => Ok(false),
+        }
+    }
+
+    pub async fn get(&self, k: String) -> Result<Option<Types>, String> {
+        let tx = self.tx.clone();
+        let (tx_o, rx_o) = oneshot::channel();
+        let action = Action::Get(k.clone());
+        let send = (action, tx_o);
+
+        tx.send(send)
+            .await
+            .map_err(|_| format!("receiver dropped, get key {}", k))?;
+
+        match rx_o.await {
+            Ok(types) => Ok(types),
+            Err(e) => Err(format!("get failed {} with error: {:?}", k, e)),
+        }
+    }
+
+    pub async fn len(&self) -> Result<usize, String> {
+        let tx = self.tx.clone();
+        let (tx_o, rx_o) = oneshot::channel();
+        let action = Action::Len;
+        let send = (action, tx_o);
+
+        tx.send(send)
+            .await
+            .map_err(|_| format!("receiver dropped, len",))?;
+
+        match rx_o.await {
+            Ok(Some(Types::UInteger(len))) => Ok(len),
+            _ => Err(format!("len failed")),
         }
     }
 }
