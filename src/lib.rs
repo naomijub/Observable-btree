@@ -10,6 +10,7 @@ use model::Types;
 pub enum Action {
     Insert(String, Types),
     Contains(String),
+    Get(String),
 }
 
 pub struct BTree {
@@ -33,6 +34,17 @@ impl BTree {
                     Action::Contains(k) => {
                         let contains = btree.contains_key(&k);
                         if let Err(_) = tx_o.send(Some(Types::Boolean(contains))) {
+                            println!("the receiver dropped, mpsc contains k: {}", k);
+                        }
+                    }
+                    Action::Get(k) => {
+                        let get = btree.get(&k);
+                        let get = if let Some(types) = get {
+                            Some(types.to_owned())
+                        } else {
+                            None
+                        };
+                        if let Err(_) = tx_o.send(get) {
                             println!("the receiver dropped, mpsc contains k: {}", k);
                         }
                     }
@@ -71,6 +83,22 @@ impl BTree {
             Ok(Some(Types::Boolean(true))) => Ok(true),
             Err(e) => Err(format!("{:?}", e)),
             _ => Ok(false),
+        }
+    }
+
+    pub async fn get(&self, k: String) -> Result<Option<Types>, String> {
+        let tx = self.tx.clone();
+        let (tx_o, rx_o) = oneshot::channel();
+        let action = Action::Get(k.clone());
+        let send = (action, tx_o);
+
+        tx.send(send)
+            .await
+            .map_err(|_| format!("receiver dropped, get key {}", k))?;
+
+        match rx_o.await {
+            Ok(types) => Ok(types),
+            Err(e) => Err(format!("get failed {} with error: {:?}", k, e)),
         }
     }
 }
