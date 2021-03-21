@@ -3,6 +3,7 @@ use std::{
     convert::{TryFrom, TryInto},
 };
 
+/// Available types to use as `BTree` values.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Types {
     Char(char),

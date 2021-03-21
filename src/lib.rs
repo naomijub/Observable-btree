@@ -7,7 +7,7 @@ pub mod model;
 
 use model::Types;
 
-pub enum Action {
+enum Action {
     Insert(String, Types),
     Contains(String),
     Get(String),
@@ -16,13 +16,19 @@ pub enum Action {
     Values,
 }
 
+/// `BTree` is where the informatio `Sender` is contained.
+/// Its inner implementation has a tuple containing the action to be taken as well as a oneshot channel to receive data.
+/// To start the `BTree` thread just execute `BTree::start(buffer_size: usize)`. If you `buffer_size` is too short
+/// it may cause synchronization problems, so it should be well ajusted to your application needs.
 pub struct BTree {
     tx: Sender<(Action, tokio::sync::oneshot::Sender<Option<Types>>)>,
 }
 
 impl BTree {
-    pub fn start(buffer: usize) -> Self {
-        let (tx, mut rx) = mpsc::channel(buffer);
+    /// `BTree::start(buffer_size: usize)` is the entrypoint to start using `BTree` methods.
+    /// It creates a thread containing the BTreeMap and keeps listening to entries.
+    pub fn start(buffer_size: usize) -> Self {
+        let (tx, mut rx) = mpsc::channel(buffer_size);
         tokio::spawn(async move {
             let mut btree: BTreeMap<String, Types> = BTreeMap::new();
             while let Some((action, tx_o)) = rx.recv().await {
@@ -80,6 +86,9 @@ impl BTree {
         Self { tx }
     }
 
+    /// Method `insert` is equivalent to [`std::collection::BTreeMap insert`](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html#method.insert),
+    /// it returns `None` if the key does not exist and it returns `Some(Types::_)` with the previous value,
+    /// if the key already exists.
     pub async fn insert<V: Into<Types>>(&self, k: String, v: V) -> Result<Option<Types>, String> {
         let v = v.into();
         let tx = self.tx.clone();
@@ -95,6 +104,9 @@ impl BTree {
             .map_err(|_| format!("insert failed {}, value {:?}", k, v))
     }
 
+    /// Method `contains` is equivalent to [`std::collection::BTreeMap contains_key`](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html#method.contains_key),
+    /// It checks if a key already exists in the `BTree`. If the key exists the return is `Ok(true)`,
+    /// if it doesn't exist it returns `Ok(false)`
     pub async fn contains(&self, k: String) -> Result<bool, String> {
         let tx = self.tx.clone();
         let (tx_o, rx_o) = oneshot::channel();
@@ -111,6 +123,9 @@ impl BTree {
         }
     }
 
+    /// Method `get` is equivalent to [`std::collection::BTreeMap get`](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html#method.get),
+    /// It returns the value contained at the key passed as argument. If no key is found the return is `Ok(None)`,
+    /// else it returns `Ok(Some(Types::_))`.
     pub async fn get(&self, k: String) -> Result<Option<Types>, String> {
         let tx = self.tx.clone();
         let (tx_o, rx_o) = oneshot::channel();
@@ -127,6 +142,8 @@ impl BTree {
         }
     }
 
+    /// Method `len` is equivalent to [`std::collection::BTreeMap len`](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html#method.len),
+    /// It returns the length of the btree as a usize.
     pub async fn len(&self) -> Result<usize, String> {
         let tx = self.tx.clone();
         let (tx_o, rx_o) = oneshot::channel();
@@ -143,6 +160,9 @@ impl BTree {
         }
     }
 
+    /// Method `keys` is equivalent to [`std::collection::BTreeMap keys`](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html#method.keys),
+    /// It returns a vector containing all the keys sorted.
+    /// For `BTree` the keys are always `Strings`.
     pub async fn keys(&self) -> Result<Vec<String>, String> {
         let tx = self.tx.clone();
         let (tx_o, rx_o) = oneshot::channel();
@@ -166,6 +186,8 @@ impl BTree {
         }
     }
 
+    /// Method `values` is equivalent to [`std::collection::BTreeMap values`](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html#method.values),
+    /// It returns a vector containing all the values sorted by their respective keys order.
     pub async fn values(&self) -> Result<Vec<Types>, String> {
         let tx = self.tx.clone();
         let (tx_o, rx_o) = oneshot::channel();
