@@ -33,3 +33,32 @@ async fn test_insert_len() {
     let len = btree.len().await;
     assert_eq!(len.unwrap(), 1);
 }
+
+#[tokio::test]
+async fn test_keys_values() {
+    let btree = BTree::start(1000);
+
+    let ins = btree.insert("hello".to_string(), 546).await;
+    assert!(ins.unwrap().is_none());
+
+    let ins = btree.insert("wow".to_string(), 5).await;
+    assert!(ins.unwrap().is_none());
+
+    let ins = btree.insert("what?".to_string(), 7).await;
+    assert!(ins.unwrap().is_none());
+
+    let ins = btree.insert("wow".to_string(), 15).await;
+    assert_eq!(ins.unwrap(), Some(Types::Integer(5)));
+
+    let cont = btree.keys().await;
+    assert_eq!(
+        cont.unwrap(),
+        vec!["hello".to_string(), "what?".to_string(), "wow".to_string()]
+    );
+
+    let values = btree.values().await;
+    assert_eq!(
+        values.unwrap(),
+        vec![Types::Integer(546), Types::Integer(7), Types::Integer(15)]
+    );
+}

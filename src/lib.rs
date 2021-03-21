@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, convert::TryInto};
 
 use tokio::sync::mpsc::{self, Sender};
 use tokio::sync::oneshot;
@@ -12,6 +12,8 @@ pub enum Action {
     Contains(String),
     Get(String),
     Len,
+    Keys,
+    Values,
 }
 
 pub struct BTree {
@@ -47,6 +49,22 @@ impl BTree {
                         };
                         if let Err(_) = tx_o.send(get) {
                             println!("the receiver dropped, mpsc get k: {}", k);
+                        }
+                    }
+                    Action::Keys => {
+                        let get = btree.keys();
+                        let keys: Vec<Types> = get.map(|k| k.to_owned().into()).collect();
+
+                        if let Err(_) = tx_o.send(Some(Types::Vector(keys))) {
+                            println!("the receiver dropped, mpsc get keys");
+                        }
+                    }
+                    Action::Values => {
+                        let get = btree.values();
+                        let values: Vec<Types> = get.map(|k| k.to_owned()).collect();
+
+                        if let Err(_) = tx_o.send(Some(Types::Vector(values))) {
+                            println!("the receiver dropped, mpsc get values");
                         }
                     }
                     Action::Len => {
@@ -122,6 +140,46 @@ impl BTree {
         match rx_o.await {
             Ok(Some(Types::UInteger(len))) => Ok(len),
             _ => Err(format!("len failed")),
+        }
+    }
+
+    pub async fn keys(&self) -> Result<Vec<String>, String> {
+        let tx = self.tx.clone();
+        let (tx_o, rx_o) = oneshot::channel();
+        let action = Action::Keys;
+        let send = (action, tx_o);
+
+        tx.send(send)
+            .await
+            .map_err(|_| format!("receiver dropped, get keys"))?;
+
+        match rx_o.await {
+            Ok(Some(Types::Vector(types))) => {
+                let vec = types
+                    .into_iter()
+                    .map(|k| k.try_into())
+                    .collect::<Result<Vec<String>, String>>();
+                vec
+            }
+            Err(e) => Err(format!("get keys failed with error: {:?}", e)),
+            _ => Err(format!("get keys failed")),
+        }
+    }
+
+    pub async fn values(&self) -> Result<Vec<Types>, String> {
+        let tx = self.tx.clone();
+        let (tx_o, rx_o) = oneshot::channel();
+        let action = Action::Values;
+        let send = (action, tx_o);
+
+        tx.send(send)
+            .await
+            .map_err(|_| format!("receiver dropped, get values"))?;
+
+        match rx_o.await {
+            Ok(Some(Types::Vector(types))) => Ok(types),
+            Err(e) => Err(format!("get values failed with error: {:?}", e)),
+            _ => Err(format!("get values failed")),
         }
     }
 }
