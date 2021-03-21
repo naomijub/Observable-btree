@@ -26,5 +26,5 @@ async fn main() {
         vec![Types::Integer(546), Types::Integer(7), Types::Integer(5)]
     );
 
-    return;
+    print!("Done!")
 }

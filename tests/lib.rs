@@ -62,3 +62,30 @@ async fn test_keys_values() {
         vec![Types::Integer(546), Types::Integer(7), Types::Integer(15)]
     );
 }
+
+#[tokio::test]
+async fn test_remove() {
+    let btree = BTree::start(1000);
+
+    let ins = btree.insert("hello".to_string(), 5).await;
+    assert!(ins.unwrap().is_none());
+
+    let remove = btree.remove("hello".to_string()).await;
+    let remove_int = remove.unwrap().unwrap();
+    assert_eq!(remove_int, Types::Integer(5));
+}
+
+#[tokio::test]
+async fn test_remove_entry() {
+    let btree = BTree::start(1000);
+
+    let ins = btree.insert("hello".to_string(), 5).await;
+    assert!(ins.unwrap().is_none());
+
+    let remove = btree.remove_entry("hello".to_string()).await;
+    let remove_kv = remove.unwrap().unwrap();
+    assert_eq!(
+        remove_kv,
+        Types::KeyValue("hello".to_string(), Box::new(Types::Integer(5)))
+    );
+}

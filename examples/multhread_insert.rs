@@ -42,5 +42,5 @@ async fn main() {
         println!("Done async 2")
     };
 
-    return;
+    print!("Done!")
 }

@@ -11,5 +11,5 @@ async fn main() {
     let get_int = get.unwrap().unwrap();
     assert_eq!(get_int, Types::Integer(5));
 
-    return;
+    print!("Done!")
 }

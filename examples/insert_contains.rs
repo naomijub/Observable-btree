@@ -10,5 +10,5 @@ async fn main() {
     let cont = btree.contains("hello".to_string()).await;
     assert!(cont.unwrap());
 
-    return;
+    print!("Done!")
 }

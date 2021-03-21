@@ -14,6 +14,8 @@ enum Action {
     Len,
     Keys,
     Values,
+    Remove(String),
+    RemoveEntry(String),
 }
 
 /// `BTree` is where the informatio `Sender` is contained.
@@ -77,6 +79,24 @@ impl BTree {
                         let len = btree.len();
                         if let Err(_) = tx_o.send(Some(Types::UInteger(len))) {
                             println!("the receiver dropped, mpsc len");
+                        }
+                    }
+                    Action::Remove(k) => {
+                        let remove = btree.remove(&k);
+
+                        if let Err(_) = tx_o.send(remove) {
+                            println!("the receiver dropped, mpsc remove for key: {}", k);
+                        }
+                    }
+                    Action::RemoveEntry(k) => {
+                        let remove = btree.remove_entry(&k);
+                        let key_val = if let Some((key, value)) = remove {
+                            Some(Types::KeyValue(key, Box::new(value)))
+                        } else {
+                            None
+                        };
+                        if let Err(_) = tx_o.send(key_val) {
+                            println!("the receiver dropped, mpsc remove_entry for key: {}", k);
                         }
                     }
                 }
@@ -202,6 +222,44 @@ impl BTree {
             Ok(Some(Types::Vector(types))) => Ok(types),
             Err(e) => Err(format!("get values failed with error: {:?}", e)),
             _ => Err(format!("get values failed")),
+        }
+    }
+
+    /// Method `remove` is equivalent to [`std::collection::BTreeMap remove`](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html#method.remove),
+    /// It returns the value removed from the `BTree` for the key passed as argument. If no key is found the return is `Ok(None)`,
+    /// else it returns `Ok(Some(Types::_))`.
+    pub async fn remove(&self, k: String) -> Result<Option<Types>, String> {
+        let tx = self.tx.clone();
+        let (tx_o, rx_o) = oneshot::channel();
+        let action = Action::Remove(k.clone());
+        let send = (action, tx_o);
+
+        tx.send(send)
+            .await
+            .map_err(|_| format!("receiver dropped, remove key {}", k))?;
+
+        match rx_o.await {
+            Ok(types) => Ok(types),
+            Err(e) => Err(format!("remove failed {} with error: {:?}", k, e)),
+        }
+    }
+
+    /// Method `remove_entry` is equivalent to [`std::collection::BTreeMap remove_entry`](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html#method.remove_entry),
+    /// It returns the key and value removed from the `BTree` for the key passed as argument as a `Option<Types::KeyValue(_,_)>`.
+    /// If no key is found the return is `Ok(None)`,
+    pub async fn remove_entry(&self, k: String) -> Result<Option<Types>, String> {
+        let tx = self.tx.clone();
+        let (tx_o, rx_o) = oneshot::channel();
+        let action = Action::RemoveEntry(k.clone());
+        let send = (action, tx_o);
+
+        tx.send(send)
+            .await
+            .map_err(|_| format!("receiver dropped, remove_entry key {}", k))?;
+
+        match rx_o.await {
+            Ok(types) => Ok(types),
+            Err(e) => Err(format!("remove_entry failed {} with error: {:?}", k, e)),
         }
     }
 }
