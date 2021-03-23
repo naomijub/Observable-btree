@@ -33,70 +33,72 @@ impl BTree {
         let (tx, mut rx) = mpsc::channel(buffer_size);
         tokio::spawn(async move {
             let mut btree: BTreeMap<String, Types> = BTreeMap::new();
-            while let Some((action, tx_o)) = rx.recv().await {
-                let tx_o: tokio::sync::oneshot::Sender<Option<Types>> = tx_o;
-                match action {
-                    Action::Insert(k, v) => {
-                        let insert = btree.insert(k, v);
-                        if let Err(_) = tx_o.send(insert) {
-                            println!("the receiver dropped, mpsc insert");
+            loop {
+                if let Some((action, tx_o)) = rx.recv().await {
+                    let tx_o: tokio::sync::oneshot::Sender<Option<Types>> = tx_o;
+                    match action {
+                        Action::Insert(k, v) => {
+                            let insert = btree.insert(k, v);
+                            if let Err(_) = tx_o.send(insert) {
+                                println!("the receiver dropped, mpsc insert");
+                            }
                         }
-                    }
-                    Action::Contains(k) => {
-                        let contains = btree.contains_key(&k);
-                        if let Err(_) = tx_o.send(Some(Types::Boolean(contains))) {
-                            println!("the receiver dropped, mpsc contains k: {}", k);
+                        Action::Contains(k) => {
+                            let contains = btree.contains_key(&k);
+                            if let Err(_) = tx_o.send(Some(Types::Boolean(contains))) {
+                                println!("the receiver dropped, mpsc contains k: {}", k);
+                            }
                         }
-                    }
-                    Action::Get(k) => {
-                        let get = btree.get(&k);
-                        let get = if let Some(types) = get {
-                            Some(types.to_owned())
-                        } else {
-                            None
-                        };
-                        if let Err(_) = tx_o.send(get) {
-                            println!("the receiver dropped, mpsc get k: {}", k);
+                        Action::Get(k) => {
+                            let get = btree.get(&k);
+                            let get = if let Some(types) = get {
+                                Some(types.to_owned())
+                            } else {
+                                None
+                            };
+                            if let Err(_) = tx_o.send(get) {
+                                println!("the receiver dropped, mpsc get k: {}", k);
+                            }
                         }
-                    }
-                    Action::Keys => {
-                        let get = btree.keys();
-                        let keys: Vec<Types> = get.map(|k| k.to_owned().into()).collect();
+                        Action::Keys => {
+                            let get = btree.keys();
+                            let keys: Vec<Types> = get.map(|k| k.to_owned().into()).collect();
 
-                        if let Err(_) = tx_o.send(Some(Types::Vector(keys))) {
-                            println!("the receiver dropped, mpsc get keys");
+                            if let Err(_) = tx_o.send(Some(Types::Vector(keys))) {
+                                println!("the receiver dropped, mpsc get keys");
+                            }
                         }
-                    }
-                    Action::Values => {
-                        let get = btree.values();
-                        let values: Vec<Types> = get.map(|k| k.to_owned()).collect();
+                        Action::Values => {
+                            let get = btree.values();
+                            let values: Vec<Types> = get.map(|k| k.to_owned()).collect();
 
-                        if let Err(_) = tx_o.send(Some(Types::Vector(values))) {
-                            println!("the receiver dropped, mpsc get values");
+                            if let Err(_) = tx_o.send(Some(Types::Vector(values))) {
+                                println!("the receiver dropped, mpsc get values");
+                            }
                         }
-                    }
-                    Action::Len => {
-                        let len = btree.len();
-                        if let Err(_) = tx_o.send(Some(Types::UInteger(len))) {
-                            println!("the receiver dropped, mpsc len");
+                        Action::Len => {
+                            let len = btree.len();
+                            if let Err(_) = tx_o.send(Some(Types::UInteger(len))) {
+                                println!("the receiver dropped, mpsc len");
+                            }
                         }
-                    }
-                    Action::Remove(k) => {
-                        let remove = btree.remove(&k);
+                        Action::Remove(k) => {
+                            let remove = btree.remove(&k);
 
-                        if let Err(_) = tx_o.send(remove) {
-                            println!("the receiver dropped, mpsc remove for key: {}", k);
+                            if let Err(_) = tx_o.send(remove) {
+                                println!("the receiver dropped, mpsc remove for key: {}", k);
+                            }
                         }
-                    }
-                    Action::RemoveEntry(k) => {
-                        let remove = btree.remove_entry(&k);
-                        let key_val = if let Some((key, value)) = remove {
-                            Some(Types::KeyValue(key, Box::new(value)))
-                        } else {
-                            None
-                        };
-                        if let Err(_) = tx_o.send(key_val) {
-                            println!("the receiver dropped, mpsc remove_entry for key: {}", k);
+                        Action::RemoveEntry(k) => {
+                            let remove = btree.remove_entry(&k);
+                            let key_val = if let Some((key, value)) = remove {
+                                Some(Types::KeyValue(key, Box::new(value)))
+                            } else {
+                                None
+                            };
+                            if let Err(_) = tx_o.send(key_val) {
+                                println!("the receiver dropped, mpsc remove_entry for key: {}", k);
+                            }
                         }
                     }
                 }
