@@ -3,14 +3,17 @@ use std::{collections::BTreeMap, convert::TryInto};
 use tokio::sync::mpsc::{self, Sender};
 use tokio::sync::oneshot;
 
+pub mod logic;
 pub mod model;
 
-use model::Types;
+use logic::add;
+use model::{Operation, Types};
 
 enum Action {
     Insert(String, Types),
     Contains(String),
     Get(String),
+    GetMut(String, Types, Operation),
     Len,
     Keys,
     Values,
@@ -47,6 +50,22 @@ impl BTree {
                             let contains = btree.contains_key(&k);
                             if let Err(_) = tx_o.send(Some(Types::Boolean(contains))) {
                                 println!("the receiver dropped, mpsc contains k: {}", k);
+                            }
+                        }
+                        Action::GetMut(key, value, f) => {
+                            let get = if let Some(x) = btree.get_mut(&key) {
+                                match f {
+                                    Operation::Replace => {
+                                        *x = value;
+                                        Some(Types::Boolean(true))
+                                    }
+                                    Operation::Add => add(x, value),
+                                }
+                            } else {
+                                None
+                            };
+                            if let Err(_) = tx_o.send(get) {
+                                println!("the receiver dropped, mpsc get mut k: {}", key);
                             }
                         }
                         Action::Get(k) => {
@@ -161,6 +180,31 @@ impl BTree {
         match rx_o.await {
             Ok(types) => Ok(types),
             Err(e) => Err(format!("get failed {} with error: {:?}", k, e)),
+        }
+    }
+
+    /// Method `get_mut` is equivalent to [`std::collection::BTreeMap get_mut`](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html#method.get_mut),
+    /// It applies an `Operation` to the value obtained and returns true if the operation succeeded or false if it failed.
+    pub async fn get_mut<V: Into<Types>>(
+        &self,
+        k: String,
+        v: V,
+        op: Operation,
+    ) -> Result<bool, String> {
+        let v: Types = v.into();
+        let tx = self.tx.clone();
+        let (tx_o, rx_o) = oneshot::channel();
+        let action = Action::GetMut(k.clone(), v, op);
+        let send = (action, tx_o);
+
+        tx.send(send)
+            .await
+            .map_err(|_| format!("receiver dropped, get mut key {}", k))?;
+
+        match rx_o.await {
+            Ok(Some(Types::Boolean(true))) => Ok(true),
+            Err(e) => Err(format!("get mut failed {} with error: {:?}", k, e)),
+            _ => Ok(false),
         }
     }
 

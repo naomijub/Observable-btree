@@ -3,6 +3,12 @@ use std::{
     convert::{TryFrom, TryInto},
 };
 
+pub enum Operation {
+    Add,
+    Replace,
+    // ...
+}
+
 /// Available types to use as `BTree` values.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Types {
