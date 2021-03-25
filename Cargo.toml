@@ -6,7 +6,7 @@ description = "Reactive Observable BTree"
 readme = "README.md"
 documentation = "https://docs.rs/observable-tree/"
 repository = "https://github.com/naomijub/observable-tree"
-keywords = ["tokio", "sync", "async", "reactive", "observable", "btree",]
+keywords = ["reactive", "observable", "btree", "tokio", "sync", "async", ]
 license = "MIT"
 edition = "2018"
 
