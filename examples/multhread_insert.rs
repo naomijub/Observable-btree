@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use observable_tree::BTree;
+use observable_btree::BTree;
 
 #[tokio::main]
 async fn main() {

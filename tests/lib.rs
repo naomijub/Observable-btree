@@ -1,4 +1,4 @@
-use observable_tree::{model::Types, BTree};
+use observable_btree::{model::Types, BTree};
 
 #[tokio::test]
 async fn test_insert_contains() {

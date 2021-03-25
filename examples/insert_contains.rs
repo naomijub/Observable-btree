@@ -1,4 +1,4 @@
-use observable_tree::BTree;
+use observable_btree::BTree;
 
 #[tokio::main]
 async fn main() {

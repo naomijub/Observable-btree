@@ -1,11 +1,11 @@
 [package]
-name = "observable-tree"
+name = "observable-btree"
 version = "0.1.0"
 authors = ["Julia Naomi <jnboeira@outlook.com>", "Otavio Pace <otaviopp8@gmail.com>"]
 description = "Reactive Observable BTree"
 readme = "README.md"
-documentation = "https://docs.rs/observable-tree/"
-repository = "https://github.com/naomijub/observable-tree"
+documentation = "https://docs.rs/observable-btree/"
+repository = "https://github.com/naomijub/observable-btree"
 keywords = ["reactive", "observable", "btree", "tokio", "async", ]
 license = "MIT"
 edition = "2018"
