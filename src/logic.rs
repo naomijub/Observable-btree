@@ -29,6 +29,17 @@ pub fn add(x: &mut Types, v: Types) -> Option<Types> {
             *x = Types::HashMap(xx);
             Some(Types::Boolean(true))
         }
+        (Types::BTreeMap(mut xx), Types::KeyValue(k, vv)) => {
+            let new_v = vv.as_ref();
+            xx.insert(k, new_v.to_owned());
+            *x = Types::BTreeMap(xx);
+            Some(Types::Boolean(true))
+        }
+        (Types::Vector(mut xx), vv) => {
+            xx.push(vv);
+            *x = Types::Vector(xx);
+            Some(Types::Boolean(true))
+        }
         _ => None,
     }
 }
