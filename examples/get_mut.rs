@@ -1,4 +1,4 @@
-use observable_tree::{model::Types, BTree};
+use observable_btree::{model::Types, BTree};
 
 #[tokio::main]
 async fn main() {
@@ -11,7 +11,7 @@ async fn main() {
         .get_mut(
             "hello".to_string(),
             5,
-            observable_tree::model::Operation::Add,
+            observable_btree::model::Operation::Add,
         )
         .await;
     assert!(get_mut.unwrap());
@@ -24,7 +24,7 @@ async fn main() {
         .get_mut(
             "hello".to_string(),
             4,
-            observable_tree::model::Operation::Replace,
+            observable_btree::model::Operation::Replace,
         )
         .await;
     assert!(get_mut.unwrap());

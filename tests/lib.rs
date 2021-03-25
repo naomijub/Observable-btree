@@ -101,7 +101,7 @@ async fn test_insert_getmut() {
         .get_mut(
             "hello".to_string(),
             5,
-            observable_tree::model::Operation::Add,
+            observable_btree::model::Operation::Add,
         )
         .await;
     assert!(get_mut.unwrap());
@@ -114,7 +114,7 @@ async fn test_insert_getmut() {
         .get_mut(
             "hello".to_string(),
             4,
-            observable_tree::model::Operation::Replace,
+            observable_btree::model::Operation::Replace,
         )
         .await;
     assert!(get_mut.unwrap());
