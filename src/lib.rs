@@ -228,7 +228,7 @@ impl BTree {
 
     /// Method `keys` is equivalent to [`std::collection::BTreeMap keys`](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html#method.keys),
     /// It returns a vector containing all the keys sorted.
-    /// For `BTree` the keys are always `Strings`.
+    /// For `BTree` the keys are always `String`.
     pub async fn keys(&self) -> Result<Vec<String>, String> {
         let tx = self.tx.clone();
         let (tx_o, rx_o) = oneshot::channel();
