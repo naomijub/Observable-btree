@@ -21,7 +21,7 @@ enum Action {
     RemoveEntry(String),
 }
 
-/// `BTree` is where the informatio `Sender` is contained.
+/// `BTree` is where the information `Sender` is contained.
 /// Its inner implementation has a tuple containing the action to be taken as well as a oneshot channel to receive data.
 /// To start the `BTree` thread just execute `BTree::start(buffer_size: usize)`. If you `buffer_size` is too short
 /// it may cause synchronization problems, so it should be well ajusted to your application needs.
@@ -228,7 +228,7 @@ impl BTree {
 
     /// Method `keys` is equivalent to [`std::collection::BTreeMap keys`](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html#method.keys),
     /// It returns a vector containing all the keys sorted.
-    /// For `BTree` the keys are always `Strings`.
+    /// For `BTree` the keys are always `String`.
     pub async fn keys(&self) -> Result<Vec<String>, String> {
         let tx = self.tx.clone();
         let (tx_o, rx_o) = oneshot::channel();
