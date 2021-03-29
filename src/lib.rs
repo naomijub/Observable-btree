@@ -22,7 +22,7 @@ enum Action {
 }
 
 /// `BTree` is where the information `Sender` is contained.
-/// It's inner implementation has a tuple containing the action to be taken as well as a oneshot channel to receive data.
+/// Its inner implementation has a tuple containing the action to be taken as well as a oneshot channel to receive data.
 /// To start the `BTree` thread just execute `BTree::start(buffer_size: usize)`. If you `buffer_size` is too short
 /// it may cause synchronization problems, so it should be well ajusted to your application needs.
 pub struct BTree {
